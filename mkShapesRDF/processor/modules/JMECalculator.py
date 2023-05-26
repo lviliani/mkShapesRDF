@@ -38,11 +38,28 @@ class JMECalculator(Module):
         loadJMESystematicsCalculators()
         ROOT.gInterpreter.ProcessLine("JetVariationsCalculator myJetVarCalc{}")
         calc = getattr(ROOT, "myJetVarCalc")
+
+        ROOT.gInterpreter.ProcessLine("Type1METVariationsCalculator myMETVarCalc{}")
+        metcalc = getattr(ROOT, "myMETVarCalc")
+
+
         # redo JEC, push_back corrector parameters for different levels
         jecParams = getattr(ROOT, "std::vector<JetCorrectorParameters>")()
         for txtJEC in txtJECs:
             jecParams.push_back(ROOT.JetCorrectorParameters(txtJEC))
         calc.setJEC(jecParams)
+        metcalc.setJEC(jecParams)
+
+        jecL1Params = getattr(ROOT, "std::vector<JetCorrectorParameters>")()
+        txtL1JECs = []
+        txtL1JECs.append(jecDBCache.getPayload(JEC_era, "L1FastJet", p_object))
+        for txtJEC in txtL1JECs:
+            jecL1Params.push_back(ROOT.JetCorrectorParameters(txtJEC))
+        metcalc.setL1JEC(jecL1Params)
+
+        metcalc.setUnclusteredEnergyTreshold(20.)
+        metcalc.setIsT1SmearedMET(True)
+
         # calculate JES uncertainties (repeat for all sources)
 
         # uncert_sources = ['Total']
@@ -56,10 +73,21 @@ class JMECalculator(Module):
         for s in sources:
             jcp_unc = ROOT.JetCorrectorParameters(txtUnc, s)
             calc.addJESUncertainty(s, jcp_unc)
+            metcalc.addJESUncertainty(s, jcp_unc)
 
         if self.do_JER:
             # Smear jets, with JER uncertainty
             calc.setSmearing(
+                txtPtRes,
+                txtSF,
+                True,
+                True,
+                0.2,
+                3.0,  # decorrelate for different regions
+            )  # use hybrid recipe, matching parameters
+
+                        # Smear jets, with JER uncertainty
+            metcalc.setSmearing(
                 txtPtRes,
                 txtSF,
                 True,
@@ -94,6 +122,49 @@ class JMECalculator(Module):
         cols.append("GenJet_mass")
 
         df = df.Define("jetVars", f'myJetVarCalc.produce({", ".join(cols)})')
+
+
+        metcols = []
+        metcols.append("CleanJet_pt")
+        metcols.append("CleanJet_eta")
+        metcols.append("CleanJet_phi")
+        metcols.append("Take(Jet_mass, CleanJet_jetIdx)")
+        metcols.append("Take(Jet_rawFactor, CleanJet_jetIdx)")
+        metcols.append("Take(Jet_area, CleanJet_jetIdx)")
+        metcols.append("Take(Jet_muonSubtrFactor, CleanJet_jetIdx)")
+        metcols.append("Take(Jet_neEmEF, CleanJet_jetIdx)")
+        metcols.append("Take(Jet_chEmEF, CleanJet_jetIdx)")
+        metcols.append("Take(Jet_jetId, CleanJet_jetIdx)")
+        metcols.append("fixedGridRhoFastjetAll")
+
+        metcols.append("Take(Jet_partonFlavour, CleanJet_jetIdx)")
+
+        # seed
+        metcols.append(
+            "(run<<20) + (luminosityBlock<<10) + event + 1 + int(Jet_eta[0]/.01)"
+        )
+
+        # gen jet coll
+        metcols.append("GenJet_pt")
+        metcols.append("GenJet_eta")
+        metcols.append("GenJet_phi")
+        metcols.append("GenJet_mass")
+
+        metcols.append("RawMET_phi")
+        metcols.append("RawMET_pt")
+        metcols.append("MET_MetUnclustEnUpDeltaX")
+        metcols.append("MET_MetUnclustEnUpDeltaY")
+        metcols.append("Take(CorrT1METJet_rawPt, CleanJet_jetIdx)")
+        metcols.append("Take(CorrT1METJet_eta, CleanJet_jetIdx)")
+        metcols.append("Take(CorrT1METJet_phi, CleanJet_jetIdx)")
+        metcols.append("Take(CorrT1METJet_area, CleanJet_jetIdx)")
+        metcols.append("Take(CorrT1METJet_muonSubtrFactor, CleanJet_jetIdx)")
+        metcols.append("ROOT::VecOps::RVec<float>()")
+        metcols.append("ROOT::VecOps::RVec<float>()")
+
+        df = df.Define("metVars", f'myMETVarCalc.produce({", ".join(metcols)})')
+
+
 
         # resortCols = getColumnsNamesRegex(df, 'Jet_*')
 
@@ -147,7 +218,14 @@ class JMECalculator(Module):
                 do = f"Take(jetVars.{variable.split('_')[-1]}({2*i+1+1}), CleanJet_sorting)"
                 df = df.Vary(variable, "ROOT::RVec<ROOT::RVecF>{" + up + ", " + do + "}", ["up", "down"], source) 
 
+        for variable in ["PuppiMET_pt"]:
+            for i, source in enumerate(sources):
+                up = f"metVars.{variable.split('_')[-1]}({2*i+1})"
+                do = f"metVars.{variable.split('_')[-1]}({2*i+1+1})"
+                df = df.Vary(variable, "ROOT::RVec<ROOT::RVecF>{" + up + ", " + do + "}", ["up", "down"], source)
+
         df.DropColumns("jetVars")
+        df.DropColumns("metVars")
         df.DropColumns("CleanJet_sorting")
 
         return df

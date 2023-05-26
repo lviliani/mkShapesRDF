@@ -74,6 +74,17 @@ Steps = {
             "finalSnapshot_MC",
         ],
     },
+    "MCFull2018v9_JES_l2Kin": {
+        "isChain": True,
+        "do4MC": True,
+        "do4Data": False,
+        "subTargets": [
+            "jmeCalculator_18UL",
+            "l2Kin",
+            "finalSnapshot_JES",
+        ],
+    },
+
     "MCUL18_debugJES": {
         "isChain": True,
         "do4MC": True,
@@ -164,12 +175,20 @@ Steps = {
         "declare": "snapshot = lambda : Snapshot('output.root', ['CleanJet_*', 'Jet_*'])",
         "module": "snapshot()",
     },
+    "finalSnapshot_JES": {
+        "isChain": False,
+        "do4MC": True,
+        "do4Data": True,
+        "import": "mkShapesRDF.processor.modules.Snapshot",
+        "declare": "snapshot = lambda : Snapshot('output.root', ['CleanJet_*', 'mjj_*'])",
+        "module": "snapshot()",
+    },
     "finalSnapshot_MC": {
         "isChain": False,
         "do4MC": True,
         "do4Data": False,
         "import": "mkShapesRDF.processor.modules.Snapshot",
-        "declare": "snapshot = lambda : Snapshot('output.root', ['Lepton_*', 'CleanJet_*', 'Jet_*', 'Electron_*', 'Muon_*', 'baseW', 'genWeight'])",
+        "declare": "snapshot = lambda : Snapshot('output.root', ['Lepton_*', 'CleanJet_*', 'Jet_*', 'Electron_*', 'Muon_*', 'baseW', 'genWeight', 'mjj*'])",
         "module": "snapshot()",
     },
     "finalSnapshot_DATA": {

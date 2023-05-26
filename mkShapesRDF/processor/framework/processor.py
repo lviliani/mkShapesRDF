@@ -70,20 +70,21 @@ def getFiles_cfg(sampleName):
 
 
 condorDir = "/".join(os.path.abspath(".").split("/")[:-1]) + "/condor"
-eosDir = '/eos/user/g/gpizzati/mkShapesRDF_nanoAOD'
+eosDir = '/eos/user/l/lviliani/mkShapesRDF_nanoAOD'
 
 procName = "Run2018_UL2018_nAODv9_Full2018v9"
 sampleName = "DoubleMuon_Run2018A-UL2018-v1"
 step = "DATAl1loose2018v9"
 
 procName = "Summer20UL18_106x_nAODv9_Full2018v9"
-sampleName = "DYJetsToLL_M-50"
-step = "MCFull2018v9"
+#sampleName = "DYJetsToLL_M-50"
+sampleName = "TTTo2L2Nu"
+step = "MCFull2018v9_JES_l2Kin"
 #sampleName = "EWKZ2Jets_ZToLL_M-50_MJJ-120"
 
-submit = True
+submit = False
 
-default = True
+default = False
 if default:
     inputFolder = ""
     redirector = ""
@@ -96,7 +97,7 @@ else:
     redirector = ""
     useProxy = False
     maxFilesPerJob = 1
-    limitFiles = -1
+    limitFiles = 1
 
 
 
